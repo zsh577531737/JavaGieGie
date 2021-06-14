@@ -1,0 +1,66 @@
+import java.util.concurrent.CountDownLatch;
+
+/**
+ * 演示重排序的现象，CountDownLatch可以让两个线程同时执行，后面章节会重点分析，
+ * 这里利用for循环，直到想要的结果出现才会停止程序，测试小概率事件。
+ */
+public class JMMExecution {
+
+    private static int x = 0, y = 0;
+    private static int a = 0, b = 0;
+
+    public static void main(String[] args) throws InterruptedException {
+        int i = 0;
+        for (; ; ) {
+            i++;
+            x = 0;
+            y = 0;
+            a = 0;
+            b = 0;
+
+            CountDownLatch latch = new CountDownLatch(3);
+
+            Thread one = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        latch.countDown();
+                        latch.await();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    a = 1;
+                    x = b;
+                }
+            });
+            Thread two = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        latch.countDown();
+                        latch.await();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    b = 1;
+                    y = a;
+                }
+            });
+            two.start();
+            one.start();
+            latch.countDown();
+            one.join();
+            two.join();
+
+            String result = "第" + i + "次（" + x + "," + y + ")";
+            if (x == 0 && y == 0) {
+                System.out.println(result);
+                break;
+            } else {
+                System.out.println(result);
+            }
+        }
+    }
+
+
+}
